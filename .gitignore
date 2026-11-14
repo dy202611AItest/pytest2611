@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# 测试报告（每次运行都会重新生成，不进版本库）
+reports/
