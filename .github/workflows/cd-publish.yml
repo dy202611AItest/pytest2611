@@ -111,7 +111,7 @@ jobs:
           HTML
           touch site/.nojekyll
 
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
         with:
           # 尝试自动开启 Pages（Source = GitHub Actions）。
           # 注意：GITHUB_TOKEN 通常没有仓库管理员权限，首次可能仍失败，
