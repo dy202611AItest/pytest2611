@@ -1,0 +1,125 @@
+name: CD - Publish Report
+
+# CI 在 main 上跑绿之后，自动把测试报告 + 覆盖率报告发布到 GitHub Pages。
+# 手动发布：Actions → CD - Publish Report → Run workflow（可填 run_id）。
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "要发布的 CI run ID（留空则自动取 main 上最近一次成功的 CI）"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: read # 跨 run 下载产物需要
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy report to GitHub Pages
+    # PR 触发的 CI 不发布；只发布 main 上成功的运行
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event != 'pull_request')
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Resolve source run
+        id: source
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_RUN_ID: ${{ inputs.run_id }}
+          EVENT_RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          run_id="${INPUT_RUN_ID:-$EVENT_RUN_ID}"
+          if [ -z "$run_id" ]; then
+            run_id=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml \
+              --branch main --status success --limit 1 \
+              --json databaseId --jq '.[0].databaseId')
+          fi
+          if [ -z "$run_id" ] || [ "$run_id" = "null" ]; then
+            echo "::error::找不到可发布的 CI 运行，请先在 main 上成功跑一次 CI"
+            exit 1
+          fi
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+
+      - name: Download report artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: test-report-ubuntu-latest-3.12
+          path: site
+          run-id: ${{ steps.source.outputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build entry page
+        run: |
+          mv site/test-report.html site/report.html
+          cat > site/index.html <<HTML
+          <!doctype html>
+          <html lang="zh-CN">
+          <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <title>自动化测试报告</title>
+          <style>
+            :root { color-scheme: light dark; }
+            body { margin: 0; padding: 48px 24px; background: #f6f8fa; color: #1f2328;
+                   font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif; }
+            .wrap { max-width: 780px; margin: 0 auto; }
+            h1 { font-size: 26px; margin: 0 0 6px; }
+            p { color: #656d76; margin: 0 0 28px; }
+            .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+            a.card { display: block; padding: 20px; background: #fff; border: 1px solid #d0d7de;
+                     border-radius: 12px; text-decoration: none; color: inherit; }
+            a.card:hover { border-color: #0969da; }
+            a.card strong { display: block; font-size: 17px; margin-bottom: 4px; color: #0969da; }
+            a.card span { color: #656d76; font-size: 14px; }
+            footer { margin-top: 40px; font-size: 12px; color: #656d76; }
+            @media (prefers-color-scheme: dark) {
+              body { background: #0d1117; color: #e6edf3; }
+              p, a.card span, footer { color: #8d96a0; }
+              a.card { background: #161b22; border-color: #30363d; }
+              a.card strong, a.card:hover { color: #58a6ff; }
+            }
+          </style>
+          </head>
+          <body>
+          <div class="wrap">
+            <h1>自动化测试报告</h1>
+            <p>由 GitHub Actions 在 main 分支验证通过后自动发布</p>
+            <div class="cards">
+              <a class="card" href="report.html"><strong>测试报告</strong><span>通过率、失败详情与全部用例</span></a>
+              <a class="card" href="htmlcov/index.html"><strong>覆盖率报告</strong><span>按文件查看行 / 分支覆盖情况</span></a>
+            </div>
+            <footer>来源：<a href="https://github.com/${{ github.repository }}/actions/runs/${run_id}">CI run ${run_id}</a></footer>
+          </div>
+          </body>
+          </html>
+          HTML
+          touch site/.nojekyll
+
+      - uses: actions/configure-pages@v5
+        with:
+          # 首次运行时自动开启 Pages（Source = GitHub Actions），免去手动点设置
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4

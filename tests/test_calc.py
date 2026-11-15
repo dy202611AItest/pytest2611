@@ -25,3 +25,9 @@ def test_divide(a, b, expected):
 def test_divide_by_zero_raises():
     with pytest.raises(ValueError, match="cannot divide by zero"):
         divide(1, 0)
+
+
+@pytest.mark.smoke
+def test_smoke_path():
+    """最小冒烟链路：CI 里可用 -m smoke 快速验证环境是否可用。"""
+    assert divide(add(1, 1), 2) == 1
