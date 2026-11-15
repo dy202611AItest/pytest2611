@@ -165,8 +165,9 @@ CI 里则把同样的地址存成仓库 Secret `WECOM_WEBHOOK`（见下文），
 
 发布后的地址：<https://dy202611aitest.github.io/pytest2611/>
 
-**Pages 会自动开启**：CD 首次运行时通过 `actions/configure-pages` 的 `enablement: true` 自动把
-Source 设为 **GitHub Actions**，无需手动点设置。若组织策略禁止自动开启，则手动处理：
+**Pages 需要首次开启一次**：`GITHUB_TOKEN` 通常没有仓库管理员权限，`actions/configure-pages`
+的 `enablement: true` 只在权限允许时才能自动创建站点，否则会报
+`Resource not accessible by integration`。手动处理（本仓库已完成）：
 
 1. 仓库 **Settings → Pages** → **Build and deployment → Source** 选择 **GitHub Actions**（不要选 Deploy from a branch）。
 2. 在 **Settings → Environments** 中会看到自动创建的 `github-pages`，可按需加保护规则。

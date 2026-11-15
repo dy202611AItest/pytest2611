@@ -104,7 +104,7 @@ jobs:
               <a class="card" href="report.html"><strong>测试报告</strong><span>通过率、失败详情与全部用例</span></a>
               <a class="card" href="htmlcov/index.html"><strong>覆盖率报告</strong><span>按文件查看行 / 分支覆盖情况</span></a>
             </div>
-            <footer>来源：<a href="https://github.com/${{ github.repository }}/actions/runs/${run_id}">CI run ${run_id}</a></footer>
+            <footer>来源：<a href="https://github.com/${{ github.repository }}/actions/runs/${{ steps.source.outputs.run_id }}">CI run ${{ steps.source.outputs.run_id }}</a></footer>
           </div>
           </body>
           </html>
@@ -113,7 +113,9 @@ jobs:
 
       - uses: actions/configure-pages@v5
         with:
-          # 首次运行时自动开启 Pages（Source = GitHub Actions），免去手动点设置
+          # 尝试自动开启 Pages（Source = GitHub Actions）。
+          # 注意：GITHUB_TOKEN 通常没有仓库管理员权限，首次可能仍失败，
+          # 需要在 Settings → Pages 手动把 Source 选为 GitHub Actions 一次。
           enablement: true
 
       - uses: actions/upload-pages-artifact@v3
