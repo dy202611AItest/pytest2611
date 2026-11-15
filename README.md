@@ -134,7 +134,7 @@ python -m pytest --report-send=always              # 无论如何都发
 python -m pytest --report-send=never               # 只出本地报告
 ```
 
-CI 里则把同样的地址存成仓库 Secret `WECOM_WEBHOOK`（见下文），插件在失败时自动推送。
+CI 里把同样的地址存成仓库 Secret `WECOM_WEBHOOK`（见下文），每次测试运行都会尝试推送通知；未配置时只生成报告，不会导致构建失败。
 来自 fork 的 PR 拿不到 Secret，插件只会提示「未配置 webhook」，不会报错。
 
 ### 实现要点

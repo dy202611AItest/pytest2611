@@ -82,7 +82,7 @@ jobs:
           python -m pytest \
             --report-dir reports \
             --report-title "CI 测试报告（${OS_NAME} / Python ${PY_VERSION}）" \
-            --report-send on-failure \
+            --report-send always \
             --junitxml reports/junit.xml \
             --cov --cov-report=term-missing \
             --cov-report=xml:reports/coverage.xml \
